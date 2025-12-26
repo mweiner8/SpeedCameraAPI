@@ -1,0 +1,295 @@
+openapi: 3.0.3
+info:
+  title: Speed Camera API
+  description: RESTful API for managing speed camera data across the country
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://your-app.onrender.com
+    description: Production server
+
+tags:
+  - name: cameras
+    description: Speed camera operations
+
+paths:
+  /cameras/zipcode/{zipcode}:
+    get:
+      tags:
+        - cameras
+      summary: Get cameras by zipcode
+      description: Retrieve all speed cameras in a specific zipcode
+      parameters:
+        - name: zipcode
+          in: path
+          required: true
+          description: 5-digit zipcode
+          schema:
+            type: string
+            pattern: '^\d{5}$'
+            example: "10001"
+      responses:
+        '200':
+          description: Successful operation (returns empty array if none found)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Camera'
+        '400':
+          description: Invalid zipcode format
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cameras/search:
+    get:
+      tags:
+        - cameras
+      summary: Search cameras by street and zipcode
+      description: Find cameras where the street name matches either cross street in the specified zipcode
+      parameters:
+        - name: street
+          in: query
+          required: true
+          description: Street name to search for
+          schema:
+            type: string
+            example: "5th Ave"
+        - name: zipcode
+          in: query
+          required: true
+          description: 5-digit zipcode
+          schema:
+            type: string
+            pattern: '^\d{5}$'
+            example: "10001"
+      responses:
+        '200':
+          description: Successful operation (returns empty array if none found)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Camera'
+        '400':
+          description: Missing required parameters or invalid zipcode
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cameras:
+    post:
+      tags:
+        - cameras
+      summary: Add a new speed camera
+      description: Create a new speed camera record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraCreate'
+      responses:
+        '201':
+          description: Camera created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        '400':
+          description: Invalid input or duplicate camera
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cameras/{camera_id}:
+    put:
+      tags:
+        - cameras
+      summary: Update a camera
+      description: Update an existing camera record (all fields except ID)
+      parameters:
+        - name: camera_id
+          in: path
+          required: true
+          description: Camera ID (obtained from GET endpoints)
+          schema:
+            type: integer
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CameraUpdate'
+      responses:
+        '200':
+          description: Camera updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Camera'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - cameras
+      summary: Delete a camera
+      description: Delete a camera record by ID
+      parameters:
+        - name: camera_id
+          in: path
+          required: true
+          description: Camera ID (obtained from GET endpoints)
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Camera deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Camera deleted successfully"
+        '404':
+          description: Camera not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Camera:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Auto-generated camera ID
+          example: 1
+        cross_street_1:
+          type: string
+          description: First cross street (use abbreviations like St, Ave, Dr, Blvd)
+          example: "5th Ave"
+        cross_street_2:
+          type: string
+          description: Second cross street (use abbreviations)
+          example: "W 42nd St"
+        zipcode:
+          type: string
+          description: 5-digit zipcode
+          pattern: '^\d{5}$'
+          example: "10001"
+        speed_limit:
+          type: integer
+          description: Speed limit at camera location (mph)
+          minimum: 5
+          maximum: 85
+          example: 25
+        direction:
+          type: string
+          description: Direction of monitoring (use abbreviations N, S, E, W, NE, NW, SE, SW)
+          enum: [N, S, E, W, NE, NW, SE, SW]
+          example: "N"
+      required:
+        - id
+        - cross_street_1
+        - cross_street_2
+        - zipcode
+        - speed_limit
+        - direction
+
+    CameraCreate:
+      type: object
+      properties:
+        cross_street_1:
+          type: string
+          description: First cross street
+          example: "5th Ave"
+        cross_street_2:
+          type: string
+          description: Second cross street
+          example: "W 42nd St"
+        zipcode:
+          type: string
+          description: 5-digit zipcode
+          pattern: '^\d{5}$'
+          example: "10001"
+        speed_limit:
+          type: integer
+          description: Speed limit at camera location (mph)
+          minimum: 5
+          maximum: 85
+          example: 25
+        direction:
+          type: string
+          description: Direction of monitoring
+          enum: [N, S, E, W, NE, NW, SE, SW]
+          example: "N"
+      required:
+        - cross_street_1
+        - cross_street_2
+        - zipcode
+        - speed_limit
+        - direction
+
+    CameraUpdate:
+      type: object
+      properties:
+        cross_street_1:
+          type: string
+          description: First cross street
+          example: "5th Ave"
+        cross_street_2:
+          type: string
+          description: Second cross street
+          example: "W 42nd St"
+        zipcode:
+          type: string
+          description: 5-digit zipcode
+          pattern: '^\d{5}$'
+          example: "10001"
+        speed_limit:
+          type: integer
+          description: Speed limit at camera location (mph)
+          minimum: 5
+          maximum: 85
+          example: 25
+        direction:
+          type: string
+          description: Direction of monitoring
+          enum: [N, S, E, W, NE, NW, SE, SW]
+          example: "N"
+
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Error message
+          example: "Camera not found"
